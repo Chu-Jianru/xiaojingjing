@@ -1,0 +1,25 @@
+{
+  "engine": "qwen",
+  "speaker": "Serena",
+  "style": "cute-slow",
+  "port": 8398,
+  "localTimeoutMs": 18000,
+  "voice": "zh-CN-XiaoyiNeural",
+  "rate": "-4%",
+  "pitch": "+10Hz",
+  "volume": "-3%",
+  "mode": "reference",
+  "voiceLocked": true,
+  "seed": 20261026,
+  "reference": {
+    "path": "qq-persona/p1/voice/approved-audio-1-20261029/reference.wav",
+    "text": "喂，怎么啦？嗯，想我了吗？",
+    "sha256": "09530083dc2c78d09d368cc563e1bc3bc1de72a047df2e7c816b366d5ed1e5df"
+  },
+  "delivery": {
+    "instruct": "保持参考录音中同一个人的音色和身份。声音轻盈、清亮、甜软，像嘴角轻轻上扬、带着自然笑意和熟人说话；不是发出笑声。音区自然明亮一些，不压低嗓子，不用低沉的安抚腔或重气声，也不要尖嗓。语速轻松流畅，轻重音和小停顿随语义变化，不逐字拖长。随正文的意思自然变化轻重音、语调和短停顿。问句有疑问时才轻轻上扬，陈述自然落下，不把每句都念成疑问；亲近时含笑，认真时收敛。短句连贯，不逐字拖音，不夸张演戏。",
+    "tempo": 0.9699455268181649,
+    "gainDb": 3
+  },
+  "voiceProfileKey": "27690ff9c001f39fe6e3f76f82486579b593a117a36d37dfcd98f036160e8bc5"
+}

@@ -1,0 +1,8 @@
+# Separate CPU environment; no additional Torch/CUDA model or cloud key.
+proc-tap==1.1.1
+sherpa-onnx==2.0.1
+sounddevice==0.5.6
+psutil==7.2.2
+numpy==2.5.4
+frida==17.24.3
+pyworld==0.3.5

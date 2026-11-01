@@ -1,0 +1,4 @@
+# Optional score audition, added to the existing isolated singing environment.
+# Torch/torchaudio 2.6 + transformers 4.46.3 are shared with Vevo2.
+omegaconf==2.3.0
+pypinyin==0.55.0

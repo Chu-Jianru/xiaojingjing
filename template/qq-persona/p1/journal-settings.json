@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "diaryEnabled": true,
+  "statusEnabled": true,
+  "audience": "friends",
+  "diaryChance": 0.02,
+  "statusChance": 0.04,
+  "diaryEventChance": 0.55,
+  "statusEventChance": 0.16,
+  "diaryGapHours": 4,
+  "statusGapHours": 12,
+  "diaryMax24h": 3,
+  "statusMax24h": 1,
+  "quietStart": 23,
+  "quietEnd": 8
+}

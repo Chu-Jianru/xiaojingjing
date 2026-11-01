@@ -1,0 +1,12 @@
+# Reuse verified CUDA PyTorch 2.6.0+cu124 in an isolated --system-site-packages venv.
+# First install qwen-tts==0.1.1 with --no-deps: Gradio is only needed for its demo.
+# Also install faster-qwen3-tts==0.2.6 with --no-deps (compatible with Transformers 4).
+transformers==4.57.3
+accelerate==1.12.0
+torchaudio==2.6.0
+librosa==0.11.0
+soundfile==0.14.0
+sox==1.5.0
+onnxruntime==1.31.0
+einops==0.8.2
+modelscope-hub==0.5.1
