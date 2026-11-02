@@ -8,7 +8,7 @@
     "enable-calls.cmd": "4d125b8c5d7e18322300ff92aa7f315621f6d9b45bf7bb1fabf0bcefc609d12c",
     "install-vision.cmd": "a3b4d2fd20263189132a52e6438e235635688800e51c11378b6718df5c40d084",
     "install.cmd": "febaf16f56aeebbca66c4978f99abb7c0f10cd911d18371e540f0b02d7f6d106",
-    "README.md": "1ec8333e219c8dc105cfcf4e41517fd3fe790eac4abe92567522970076f5422d",
+    "README.md": "dcec6a6217d1bf22784c081c483188c9b77ff5f04963b1f61579fb11b266c31c",
     "setup.py": "b7b20f4c1fefe9d00f24dd9447990dd505f83878f783396def89f12c74bccdcf",
     "start.cmd": "46d5abbf21d9f3c43cead156fdfbf48cc21cff93b2eabac948703565a939108b",
     "template/bot-home/creative-runtime/package-lock.json": "fdd7d0669bdf36bb920f3048d36c76b81d18fa0de1dc81d844bb5dbd0ec4c77c",
@@ -415,7 +415,7 @@
     "template/vendor/dsh-onebot-qq/LICENSE": "d29575c8c48fd56e0de6cf59ce70c49cb25ccd24cae34767c04c64c6f730e8bb",
     "template/vendor/dsh-onebot-qq/package.json": "8fc784ec43c9e27e677d9c8f4808615d8e8af4cd756b53f1d827912a77d862ab",
     "template/vendor/persona.tgz": "ba0ee44b521aeba03677fb839b3cbe1eb10d422361c16f9cf668eaafcc6b849d",
-    "THIRD_PARTY.md": "c71330a75e9e83d1a727a8dfff91e2300ab23b3102b13f71d3a49ce9098f18fa",
+    "THIRD_PARTY.md": "f78658f3121c1c41417d2c92e77b6646cc532673bb0ab3be71849a300516d581",
     "update.cmd": "441a1ddf170623dd6b5bae6de2b73a2d031cdeace6d2836cb9807856fa1ed3fb",
     "update.py": "eeef0e83e21d6e722d4a8bb3bf7cb284d077e515874c44abf527da4396439eab"
   },
