@@ -122,7 +122,7 @@ def generate_soulx(source,out,*,start=0,end=None):
     import numpy as np
     import torch,librosa,soundfile as sf
     torch.set_num_threads(2)
-    torch.set_num_interop_threads(1)
+    if torch.get_num_interop_threads()!=1:torch.set_num_interop_threads(1)
     torch.manual_seed(20261031)
     clip,source_sha,interval=decode_reference(source,start,end)
     manifest=json.loads((RUNTIME/'svc-model-manifest.json').read_text(encoding='utf8'))

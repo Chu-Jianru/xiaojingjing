@@ -13,7 +13,7 @@
  * - **events** — WHY she feels this way: the last 8 emotion events (被夸了/
  *   被骂了/被关心了/听到好消息/等了好久才有人来) ride along in `[状态]`, so she
  *   can naturally mention the reason instead of reciting bare numbers;
- * - **sleep restores energy**: hours inside 01:00–07:00 charge +3/h instead of
+ * - **sleep restores energy**: hours inside 01:00–07:00 charge +12/h instead of
  *   draining — waking up more tired than bedtime made no sense;
  * - richer triggers: CARE (晚安/吃了吗/别累着…) and GOODNEWS (上岸/我赢了…);
  *   a >6h chat gap logs a "等了好久才有人来" event (slight mood dip);
@@ -92,10 +92,20 @@ function decay(state, now) {
     if (elapsed <= 0)
         return state;
     const hours = elapsed / 3_600_000;
-    const restHours = nightRestMs(Number(state.updatedAt || now), now) / 3_600_000;
-    const awakeHours = Math.max(0, hours - restHours);
-    // awake: about -1.2/h; asleep (01:00–07:00): +3/h back toward full.
-    state.energy = clamp(state.energy - awakeHours * 1.2 + restHours * 3.0);
+    // Apply each phase chronologically: clamping a multi-day net change once
+    // would retain rest earned before a full bar, unlike normal periodic reads.
+    let cursor = Number(state.updatedAt || now);
+    while (cursor < now) {
+        const boundary = new Date(cursor);
+        const hour = boundary.getHours();
+        const resting = hour >= 1 && hour < 7;
+        if (hour < 1) boundary.setHours(1, 0, 0, 0);
+        else if (resting) boundary.setHours(7, 0, 0, 0);
+        else { boundary.setDate(boundary.getDate() + 1); boundary.setHours(1, 0, 0, 0); }
+        const end = Math.min(now, boundary.getTime());
+        state.energy = clamp(state.energy + (end - cursor) / 3_600_000 * (resting ? 12 : -1.2));
+        cursor = end;
+    }
     // mood drifts toward neutral (50) by ~6%/hour, capped.
     const pull = Math.min(1, hours * 0.06);
     state.mood = clamp(state.mood + (50 - state.mood) * pull);
@@ -213,8 +223,6 @@ export async function renderMood(mediaDir, userId = '', { chatId = '' } = {}) {
         text += '\n（你现在特别开心，藏不住的那种）';
     else if (state.mood <= 28)
         text += '\n（你现在很低落，说话没什么劲）';
-    if (state.energy <= 25)
-        text += '\n（困得不行，随时想趴下）';
     return text;
 }
 

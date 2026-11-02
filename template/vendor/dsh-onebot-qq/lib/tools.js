@@ -36,6 +36,7 @@ import { parseMessage, cqUnescape } from './cq.js';
 import { appendMemory, forgetMemories, listMemories } from './memory-store.js';
 import { usageByDays } from './usage.js';
 import { lookImage } from './vision.js';
+import { proactiveTools } from './proactive.js';
 import { creativeTools } from './creative.js';
 import { makeHelperTool } from './helper.js';
 import { companionshipTools, relayText, requireOpportunity } from './companionship.js';
@@ -143,6 +144,7 @@ export function registerTools(ctx, bridge, connection, limits) {
     };
     register(makeReplyTool(defineTool, bridge, { appendMemory, sendReaction, adjustMood, mediaDirFallback: MEDIA_DIR_FALLBACK }));
     register(makeSelfExpressionTool(defineTool, bridge));
+    for (const tool of proactiveTools(defineTool, bridge)) register(tool);
     for (const tool of creativeTools(defineTool, bridge)) register(tool);
     for (const tool of companionshipTools(defineTool, bridge)) register(tool);
     register(makeHelperTool(defineTool, bridge, helperCtx => registerTools({ tools: { register: tool =>

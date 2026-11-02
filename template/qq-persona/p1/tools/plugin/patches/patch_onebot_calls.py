@@ -23,6 +23,9 @@ def expected(text):
     for old, new in edits:
         if old.startswith('import ') and "import { callsFor } from './calls.js';" in text:
             continue
+        # Other deployments may place their startup between journal and calls.
+        if old.strip().startswith('startJournal(') and new.split('\n')[-1] in text:
+            continue
         if new in text:
             continue
         if text.count(old) != 1:

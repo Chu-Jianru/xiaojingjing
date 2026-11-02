@@ -1,4 +1,26 @@
 ﻿# Shared read-only configuration / session helpers. Never print credentials.
+function Test-CompanionTcpPort {
+    param(
+        [ValidateRange(1, 65535)][int]$Port,
+        [ValidateRange(1, 10000)][int]$TimeoutMs = 1000
+    )
+    # CIM's listener inventory can omit a working local server. Never restart
+    # healthy DSH / QQ from that inventory alone; test actual loopback reachability.
+    $client = New-Object System.Net.Sockets.TcpClient
+    $pending = $null
+    try {
+        $pending = $client.BeginConnect('127.0.0.1', $Port, $null, $null)
+        if (-not $pending.AsyncWaitHandle.WaitOne($TimeoutMs)) { return $false }
+        $client.EndConnect($pending)
+        return [bool]$client.Connected
+    }
+    catch { return $false }
+    finally {
+        if ($pending) { $pending.AsyncWaitHandle.Close() }
+        $client.Close()
+    }
+}
+
 function Get-NapcatWebuiConfigPath {
     if ($env:NAPCAT_WEBUI_CONFIG) { return $env:NAPCAT_WEBUI_CONFIG }
     $versions = Join-Path ([Environment]::GetFolderPath('UserProfile')) 'NapCat-p1\shell\versions'
@@ -14,6 +36,21 @@ function Get-NapcatWebuiConfigPath {
         } catch { }
     }
     throw 'NapCat WebUI config unavailable; set NAPCAT_WEBUI_CONFIG'
+}
+
+function Get-NapcatMainBootProcess {
+    param([string]$Account = '__BOT_QQ__')
+    # The AV host uses the same launcher with argument 0. Never kill it by name.
+    $shellRoot = Split-Path (Get-NapcatWebuiConfigPath) -Parent
+    for ($i = 0; $i -lt 8; $i++) {
+        $launcher = Join-Path $shellRoot 'NapCatWinBootMain.exe'
+        if ((Test-Path -LiteralPath $launcher) -and (Test-Path -LiteralPath (Join-Path $shellRoot 'QQ.exe'))) { break }
+        $shellRoot = Split-Path $shellRoot -Parent
+    }
+    if (-not ((Test-Path -LiteralPath $launcher) -and (Test-Path -LiteralPath (Join-Path $shellRoot 'QQ.exe')))) { throw 'NapCat launcher path unavailable' }
+    $pattern = '^\s*"?' + [regex]::Escape($launcher) + '"?\s+"?' + [regex]::Escape($Account) + '"?\s*$'
+    Get-CimInstance Win32_Process -Filter "Name='NapCatWinBootMain.exe'" -ErrorAction Stop |
+        Where-Object { $_.ExecutablePath -eq $launcher -and $_.CommandLine -match $pattern }
 }
 
 function Get-NapcatWebuiToken {

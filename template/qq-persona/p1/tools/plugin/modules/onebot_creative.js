@@ -6,6 +6,8 @@ import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { singingFor } from './singing.js';
+import { listPracticeSongs } from './songbook.js';
+import { requireOpportunity, turnActor } from './companionship.js';
 let ROOT=dirname(fileURLToPath(import.meta.url));
 while (!existsSync(join(ROOT,'bot-home')) && dirname(ROOT)!==ROOT) ROOT=dirname(ROOT);
 
@@ -34,16 +36,21 @@ export function creativeTools(defineTool,bridge) {
             const segments=[...(args?.caption?[{type:'text',data:{text:String(args.caption).slice(0,400)}}]:[]),{type:'image',data:{file:path}}];
             const id=await bridge.sendSegments(chatId,segments);return{sent:Boolean(id),textSent:Boolean(args?.caption),messageId:id??null,path};
         }}),
-    defineTool({name:'qq_sing',description:'用固定参考音色清唱一小段原创歌词，原生歌声模型生成旋律和歌声，不使用普通朗读或变调拼字。create后台生成后自动发到当前会话，queued/generating尚未唱完或发送，不能报成功；status查看、cancel取消。暂不保证已知歌曲的原旋律，不会的歌坦诚说需要学旋律。',
-        parameters:{action:{type:'string',description:'create（默认）、status、cancel'},lyrics:{type:'string',description:'一小段原创歌词，最多120字；create必填'},style:{type:'string',description:'gentle（轻柔，默认）或expressive（抒情）'},job_id:{type:'string',description:'查询/取消任务ID，省略取本会话最新'}},output,isConcurrencySafe:()=>false,
+    defineTool({name:'qq_sing',description:'按歌名点唱真实歌曲的短清唱片段。直接create并保留song；已有缓存直接使用，新歌后台自动检索版本、获取可用音源、分离人声并用固定声线转换，首次可能数分钟，完成后缓存。无需先list或逐首训练；未指定才默认我看过前四句约15秒。可提供singer确定歌手；同名歧义会询问，音源不可用或转换失败会如实告知。不能保证所有歌曲均可获取，当前是约20秒片段而非整首。list仅查询已缓存/准备的曲库，不是可点歌范围。朋友按熟悉/好感/心情考虑，老大无亲密度门槛。queued/generating未发送，status查看、cancel取消；不假称已发，不用自编曲、朗读、别的歌或原唱音频冒充。reused=true才说复用已有练习录音，false表示本次后台准备，不称训练。',
+        parameters:{action:{type:'string',description:'create（默认）、list（查缓存曲库）、status、cancel'},song:{type:'string',description:'对方指定的真实歌名，或list返回的曲库编号；新歌也直接create，省略才默认我看过'},singer:{type:'string',description:'对方指定的歌手/版本，准确保留；不确定可省略'},job_id:{type:'string',description:'查询/取消任务ID，省略取本会话最新'}},output,isConcurrencySafe:()=>false,
         execute:async(args,exec)=>{
             const chatId=current(exec),jobs=singingFor(bridge),chat=bridge.chats.get(chatId);
             if(!chat || !['admin','member'].includes(chat.activeTurnRole))throw new Error('creative_chat_turn_required');
-            const actor={sessionId:String(exec.agent.session.id),role:chat.activeTurnRole,userId:String(chat.activeTurnUserId??''),sequence:chat.activeTurnSequence};
+            const sessionId=String(exec.agent.session.id),sender=turnActor(bridge,sessionId);
+            if(!sender)throw new Error('这轮还无法确认是谁想听我唱，先问清楚，不冒认老大');
+            const actor={sessionId,role:sender.admin?'admin':'member',userId:sender.userId,sequence:chat.activeTurnSequence};
             switch(args?.action??'create'){
+                case 'list':return listPracticeSongs();
                 case 'status':return jobs.view(jobs.lookup(chatId,args?.job_id));
                 case 'cancel':return jobs.cancel(chatId,args?.job_id,actor);
-                case 'create':return jobs.create(chatId,args,actor);
+                case 'create':
+                    await requireOpportunity(bridge,sessionId,'sing');
+                    return jobs.create(chatId,args,actor);
                 default:throw new Error('singing_action_invalid');
             }
         }})];

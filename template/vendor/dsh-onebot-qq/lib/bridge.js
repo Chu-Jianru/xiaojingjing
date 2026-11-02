@@ -22,6 +22,7 @@ import { ChatRegistry } from './registry.js';
 import { InboundPipeline, normalizeOneBot11, noteSelfSent, noteFriendAdded } from './inbound.js';
 import { callsFor } from './calls.js';
 import { stopSinging } from './singing.js';
+import { startProactive, stopProactive, noteProactiveSent } from './proactive.js';
 import { helperSessionEvent } from './helper.js';
 import { InterimTracker } from './interim.js';
 import { chatFlowFor, CHAT_FLOW_GUIDANCE, SINGLE_REPLY_GUIDANCE } from './chat-flow.js';
@@ -301,6 +302,7 @@ export class ChatBridge {
             if (this.stopping)
                 return;
             startJournal(this, createUserMessage);
+            startProactive(this);
             void callsFor(this).start().catch(() => this.deps.log('warn', 'voice call transport unavailable'));
             this.deps.log('info', 'bridge ready (' + this.registry.chats.size + ' resumed chat(s))');
         });
@@ -309,6 +311,7 @@ export class ChatBridge {
     async stop() {
         this.stopping = true;
         stopSinging(this);
+        stopProactive(this);
         listeningFor(this).stop();
         await callsFor(this).stop();
         groupConversationFor(this).stop();
@@ -503,7 +506,11 @@ export class ChatBridge {
         if (typeof chatId === 'string' && chatId.startsWith('group:'))
             noteSelfSent(chatId);
         const timing = options.modelReply ? listeningFor(this).timing(chatId) : null;
-        const send = this.outbound.sendToChat(chatId, text, timing ? { ...options, replyTiming: timing } : options);
+        const proactiveJobId = options.modelReply ? this.chats.get(chatId)?.proactiveJobId : undefined;
+        const send = this.outbound.sendToChat(chatId, text, timing ? { ...options, replyTiming: timing } : options).then(ids => {
+            if (proactiveJobId) for (const id of ids ?? []) noteProactiveSent(this, proactiveJobId, id);
+            return ids;
+        });
         return timing ? send.finally(() => timing.dispose()) : send;
     }
     /**
@@ -763,13 +770,14 @@ export class ChatBridge {
     /** Feed one user message into a chat's agent (create on demand). Records
      * the base text for /retry, queues the initiator's turn role, and applies
      * per-chat /goal + /plan prefixes. */
-    async dispatchFollowup(chatId, text, role, nickname, listeningRevision, userId) {
+    async dispatchFollowup(chatId, text, role, nickname, listeningRevision, userId, proactiveJobId) {
         const listeningStamp = listeningRevision ?? (chatId.startsWith('private:') ? listeningFor(this).state(chatId).revision : undefined);
         const final = callsFor(this).decorate(chatId, this.prefixTurn(chatId, text));
         const fallback = this.chats.get(chatId)?.lastNickname ?? '';
         const chat = await this.ensureChat(chatId, nickname ?? fallback);
         if (nickname !== undefined && nickname !== '')
             chat.lastNickname = nickname;
+        (chat.pendingProactiveJobs ??= []).push(proactiveJobId);
         chat.lastFollowup = text;
         chat.lastActivityAt = Date.now();
         // M3-D2a: a dispatched user turn starts a fresh interim cycle (the
@@ -1145,6 +1153,7 @@ export class ChatBridge {
             // empty queue and fail closed as member.
             chat.activeTurnRole = chat.pendingTurnRoles.shift() ?? 'member';
             chat.activeTurnUserId = chat.pendingTurnActors?.shift() ?? '';
+            chat.proactiveJobId = chat.pendingProactiveJobs?.shift();
             chat.activeTurnSequence = (chat.activeTurnSequence ?? 0) + 1;
             chat.lastActivityAt = Date.now();
             chat.busy = true;

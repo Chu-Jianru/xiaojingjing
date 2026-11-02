@@ -4,8 +4,8 @@ import { join } from 'node:path';
 import { profileGet } from './profiles.js';
 import { loadMood } from './mood.js';
 
-export const SOCIAL_THRESHOLDS = Object.freeze({ relay: 10, status: 60, call: 100 });
-export const SOCIAL_AFFECTION = Object.freeze({ relay: 40, status: 55, call: 65 });
+export const SOCIAL_THRESHOLDS = Object.freeze({ relay: 10, sing: 60, status: 60, call: 100 });
+export const SOCIAL_AFFECTION = Object.freeze({ relay: 40, sing: 55, status: 55, call: 65 });
 const queues = new Map();
 const relays = new WeakMap();
 const dirOf = bridge => bridge?.deps?.config?.mediaDir;

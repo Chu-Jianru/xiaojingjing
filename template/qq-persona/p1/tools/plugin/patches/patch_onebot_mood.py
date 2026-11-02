@@ -108,7 +108,7 @@ def install_module() -> None:
 
 
 def apply() -> None:
-    patch_file(TOOLS_JS, TOOLS_IMPORT_OLD, TOOLS_IMPORT_NEW, ".bak-mood")
+    patch_file(TOOLS_JS, TOOLS_IMPORT_OLD, TOOLS_IMPORT_NEW, ".bak-mood", marker="import { adjustMood, loadMood } from './mood.js';")
     patch_file(TOOLS_JS, TOOLS_ANCHOR, TOOLS_HOOK, ".bak-mood", marker="name: 'qq_mood'")
     patch_file(INBOUND, INBOUND_IMPORT_OLD, INBOUND_IMPORT_NEW, ".bak-mood")
     patch_file(INBOUND, INBOUND_ANCHOR, INBOUND_HOOK, ".bak-mood", marker="const moodBlock = await renderMood")

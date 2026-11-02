@@ -2,3 +2,7 @@ instance/
 settings.local.json
 __pycache__/
 *.log
+update-backups/
+update-state.json
+.update-*/
+update.lock

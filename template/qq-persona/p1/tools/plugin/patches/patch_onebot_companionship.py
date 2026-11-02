@@ -27,7 +27,22 @@ def expected(name, text):
             ('async interceptBusyTurn(chatId, text, role, nickname, plain, listeningRevision) {', 'async interceptBusyTurn(chatId, text, role, nickname, plain, listeningRevision, userId) {'),
             ('await this.dispatchFollowup(chatId, text, role, nickname, listeningRevision);', 'await this.dispatchFollowup(chatId, text, role, nickname, listeningRevision, userId);'),
             ("            chat.activeTurnRole = chat.pendingTurnRoles.shift() ?? 'member';", "            chat.activeTurnRole = chat.pendingTurnRoles.shift() ?? 'member';\n            chat.activeTurnUserId = chat.pendingTurnActors?.shift() ?? '';\n            chat.activeTurnSequence = (chat.activeTurnSequence ?? 0) + 1;"),
-        ]: text = replace(text, old, new)
+        ]:
+            if old.startswith('async dispatchFollowup(') and 'async dispatchFollowup(chatId, text, role, nickname, listeningRevision, userId, proactiveJobId) {' in text:
+                continue
+            text = replace(text, old, new)
+        text = replace(text, "import { stopSinging } from './singing.js';", "import { stopSinging } from './singing.js';\nimport { startProactive, stopProactive, noteProactiveSent } from './proactive.js';")
+        text = replace(text, '            startJournal(this, createUserMessage);', '            startJournal(this, createUserMessage);\n            startProactive(this);')
+        text = replace(text, '        stopSinging(this);', '        stopSinging(this);\n        stopProactive(this);')
+        text = replace(text, 'async dispatchFollowup(chatId, text, role, nickname, listeningRevision, userId) {', 'async dispatchFollowup(chatId, text, role, nickname, listeningRevision, userId, proactiveJobId) {')
+        text = text.replace('        chat.proactiveJobId = proactiveJobId;\n', '')
+        text = replace(text, '        chat.lastFollowup = text;', '        (chat.pendingProactiveJobs ??= []).push(proactiveJobId);\n        chat.lastFollowup = text;')
+        text = replace(text, "            chat.activeTurnUserId = chat.pendingTurnActors?.shift() ?? '';", "            chat.activeTurnUserId = chat.pendingTurnActors?.shift() ?? '';\n            chat.proactiveJobId = chat.pendingProactiveJobs?.shift();")
+        text = replace(text, '        const send = this.outbound.sendToChat(chatId, text, timing ? { ...options, replyTiming: timing } : options);', '''        const proactiveJobId = options.modelReply ? this.chats.get(chatId)?.proactiveJobId : undefined;
+        const send = this.outbound.sendToChat(chatId, text, timing ? { ...options, replyTiming: timing } : options).then(ids => {
+            if (proactiveJobId) for (const id of ids ?? []) noteProactiveSent(this, proactiveJobId, id);
+            return ids;
+        });''')
     elif name == 'inbound.js':
         text = replace(text, "import { renderProfileBlock } from './profiles.js';", "import { renderProfileBlock } from './profiles.js';\nimport { renderCommitments } from './companionship.js';")
         text = replace(text, '        const profileBlock = await renderProfileBlock(this.ctx.config.mediaDir, userId, nickname);', '        const profileBlock = await renderProfileBlock(this.ctx.config.mediaDir, userId, nickname);\n        const commitments = await renderCommitments(this.ctx.config.mediaDir, chatId, userId);\n        if (commitments) final = commitments + "\\n" + final;')
@@ -35,6 +50,8 @@ def expected(name, text):
         text = replace(text, 'this.ctx.interceptBusyTurn(chatId, final, role, nickname, plain, inbound.listeningRevision)', 'this.ctx.interceptBusyTurn(chatId, final, role, nickname, plain, inbound.listeningRevision, userId)')
         text = replace(text, 'this.ctx.dispatchFollowup(chatId, final, role, nickname, inbound.listeningRevision)', 'this.ctx.dispatchFollowup(chatId, final, role, nickname, inbound.listeningRevision, userId)')
     elif name == 'tools.js':
+        text = replace(text, "import { lookImage } from './vision.js';", "import { lookImage } from './vision.js';\nimport { proactiveTools } from './proactive.js';")
+        text = replace(text, '    register(makeSelfExpressionTool(defineTool, bridge));', '    register(makeSelfExpressionTool(defineTool, bridge));\n    for (const tool of proactiveTools(defineTool, bridge)) register(tool);')
         text = replace(text, "import { lookImage } from './vision.js';", "import { lookImage } from './vision.js';\nimport { creativeTools } from './creative.js';")
         text = replace(text, '    register(makeSelfExpressionTool(defineTool, bridge));', '    register(makeSelfExpressionTool(defineTool, bridge));\n    for (const tool of creativeTools(defineTool, bridge)) register(tool);')
         text = replace(text, "import { lookImage } from './vision.js';", "import { lookImage } from './vision.js';\nimport { companionshipTools, relayText, requireOpportunity } from './companionship.js';")
@@ -52,14 +69,15 @@ def expected(name, text):
 
 def main():
     edits = {}
-    for name in ['bridge.js','inbound.js','tools.js','outbound.js']:
+    proactive_only = '--proactive-only' in sys.argv
+    for name in (['bridge.js','tools.js'] if proactive_only else ['bridge.js','inbound.js','tools.js','outbound.js']):
         path = LIB/name
         raw = path.read_bytes()
         edits[path] = expected(name, raw.decode('utf8').replace('\r\n','\n')).replace('\n', '\r\n' if b'\r\n' in raw else '\n').encode('utf8')
-    edits[LIB/'companionship.js'] = (MODULES/'onebot_companionship.js').read_bytes()
-    edits[LIB/'helper.js'] = (MODULES/'onebot_helper.js').read_bytes()
-    edits[LIB/'singing.js'] = (MODULES/'onebot_singing.js').read_bytes()
-    edits[LIB/'creative.js'] = (MODULES/'onebot_creative.js').read_bytes()
+    edits[LIB/'proactive.js'] = (MODULES/'onebot_proactive.js').read_bytes()
+    if not proactive_only:
+        for name in ['companionship', 'helper', 'singing', 'songbook', 'creative']:
+            edits[LIB/(name+'.js')] = (MODULES/('onebot_'+name+'.js')).read_bytes()
     if '--check' in sys.argv:
         ok = all(p.exists() and p.read_bytes() == data for p,data in edits.items())
         print('companionship: ' + ('OK' if ok else 'OUT OF SYNC')); return 0 if ok else 1
